@@ -1,0 +1,16 @@
+# Core decoder
+pycrate==0.8.1
+python-dotenv==1.2.2
+
+# API
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+pydantic==2.13.4
+
+# GUI
+streamlit==1.62.0
+requests==2.33.1
+
+# Testing (also used by CI)
+pytest==9.1.1
+httpx==0.28.1
