@@ -6,7 +6,7 @@ colorTo: indigo
 sdk: docker
 app_port: 7860
 pinned: false
-live at:https://4glte-decoder-ivfps8cgoawts9qsst4opc.streamlit.app/
+live: https://4glte-decoder-ivfps8cgoawts9qsst4opc.streamlit.app/
 ---
 
 # 4G LTE RRC/NAS Decoder
