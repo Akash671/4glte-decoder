@@ -8,6 +8,7 @@ UE-EUTRA-Capability containers it finds along the way.
 """
 
 import binascii
+import json
 
 from pycrate_asn1dir import RRCLTE
 from pycrate_mobile import NAS
@@ -95,9 +96,17 @@ class RRCNASDecoder:
     # ============================================================
     def decode_nas(self, data, direction):
         """
-        Returns a dict that is easy for LLM/humans to consume:
-        - Tries msg.to_dict() first
-        - Falls back to msg.show() (string) if needed
+        Returns a dict that is easy for LLM/humans to consume.
+
+        Preference order:
+        1. msg.to_json() -> json.loads()   (fully structured, real field
+           names, nested IEs -- this is what pycrate's NAS/Layer3 elements
+           actually support well; unlike ASN.1 RRC objects they don't have
+           a working to_dict())
+        2. msg.get_val()                   (positional tuples, no field
+           names -- still structured, used only if to_json() itself fails)
+        3. msg.show()                      (text dump -- last resort, only
+           if pycrate can't produce anything else)
         """
         try:
             if direction.upper() == "UL":
@@ -108,13 +117,21 @@ class RRCNASDecoder:
             if err:
                 return {"error": f"NAS Parsing Error: {err}"}
 
-            # Prefer structured representation if available
+            # Preferred: structured JSON with real field names
             try:
-                nas_dict = msg.to_dict()
+                nas_dict = json.loads(msg.to_json())
                 return {"nas_struct": nas_dict}
             except Exception:
-                # Fallback: text dump
-                return {"nas_text": msg.show()}
+                pass
+
+            # Fallback: positional value tuples (still structured, no names)
+            try:
+                return {"nas_val": msg.get_val()}
+            except Exception:
+                pass
+
+            # Last resort: text dump
+            return {"nas_text": msg.show()}
 
         except Exception as e:
             return {"error": f"NAS Exception: {str(e)}"}

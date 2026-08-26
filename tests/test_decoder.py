@@ -16,6 +16,12 @@ def test_decode_nas_tau_accept(decoder):
     assert "NAS_Message" in result
     assert "error" not in result["NAS_Message"]
 
+    # Should use the structured to_json() path, not the raw get_val() or
+    # text-dump fallbacks -- i.e. real field names, not positional tuples.
+    assert "nas_struct" in result["NAS_Message"]
+    nas = result["NAS_Message"]["nas_struct"]
+    assert "EMMTrackingAreaUpdateAccept" in nas
+
 
 def test_decode_rrc_dl_dcch(decoder):
     hex_str = "5631F2857DE6"

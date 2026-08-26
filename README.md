@@ -6,10 +6,14 @@ colorTo: indigo
 sdk: docker
 app_port: 7860
 pinned: false
-live at : https://4glte-decoder-ivfps8cgoawts9qsst4opc.streamlit.app/
+live at:https://4glte-decoder-ivfps8cgoawts9qsst4opc.streamlit.app/
 ---
 
 # 4G LTE RRC/NAS Decoder
+
+[![CI](https://github.com/<your-username>/4glte-decoder/actions/workflows/ci.yml/badge.svg)](https://github.com/<your-username>/4glte-decoder/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 
 Decode raw LTE RRC and NAS hex captures (from RRC PDUs on BCCH / PCCH / CCCH / DCCH, or
 bare NAS messages) into structured, human-readable JSON — built on top of
@@ -135,6 +139,21 @@ If you'd rather deploy the FastAPI service separately (e.g. on Fly.io, Render,
 Railway, or your own VM) and point the Space's GUI at it, build with
 `Dockerfile.api` and set `DECODER_MODE=api` / `API_URL=<your API URL>` as
 environment variables on the GUI deployment.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+It depends on [pycrate](https://github.com/pycrate-org/pycrate) (LGPL-2.1+),
+used as an unmodified library dependency — no pycrate source is vendored or
+modified in this repo. If you fork this project and modify pycrate itself,
+those modifications remain subject to pycrate's LGPL terms.
+
+## Contributing
+
+Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for setup,
+the PR checklist, and a list of the highest-value things to work on. This
+project follows the [Contributor Covenant](CODE_OF_CONDUCT.md).
 
 ## Notes
 
