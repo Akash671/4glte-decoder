@@ -123,6 +123,17 @@ with st.sidebar:
     except Exception as exc:
         st.caption(f"Stats unavailable: {exc}")
 
+    st.divider()
+    st.subheader("👤 About the developer")
+    st.markdown(
+        """
+        **Akash Kumar**
+        AI Engineer
+
+        [🔗 GitHub](https://github.com/Akash671)
+        """
+    )
+
 default_hex, default_layer, default_channel, default_direction = "", "NAS", "DCCH", "DL"
 if choice != "— none —":
     ex = EXAMPLES[choice]
