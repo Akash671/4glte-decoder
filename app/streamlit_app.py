@@ -39,7 +39,7 @@ EXAMPLES = {
         "channel": "DCCH",
         "direction": "DL",
     },
-    "DL Information Transfer (RRC, DL/DCCH)": {
+    "⚠️ Diagnostic demo: partial buffer consumption (RRC, DL/DCCH)": {
         "hex": "5631F2857DE6",
         "layer": "RRC",
         "channel": "DCCH",
@@ -49,6 +49,12 @@ EXAMPLES = {
         "hex": "5DA6A5878E06",
         "layer": "RRC",
         "channel": "CCCH",
+        "direction": "UL",
+    },
+    "UE Capability Information (RRC, UL/DCCH)": {
+        "hex": "3801004000000000",
+        "layer": "RRC",
+        "channel": "DCCH",
         "direction": "UL",
     },
 }
@@ -140,6 +146,15 @@ if choice != "— none —":
     default_hex, default_layer, default_channel, default_direction = (
         ex["hex"], ex["layer"], ex["channel"], ex["direction"]
     )
+    if choice.startswith("⚠️"):
+        st.info(
+            "This example is intentionally ambiguous -- pycrate can technically "
+            "decode a message from it, but only consumes a fraction of the "
+            "buffer. Look for the `_decode_diagnostics.warning` field in the "
+            "result after decoding: that's the signal this probably isn't the "
+            "message type it looks like at a glance.",
+            icon="⚠️",
+        )
 
 col1, col2 = st.columns([2, 1])
 

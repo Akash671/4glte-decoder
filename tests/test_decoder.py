@@ -56,6 +56,54 @@ def test_unknown_layer(decoder):
     assert "error" in result
 
 
+def test_nas_error_code_has_human_readable_meaning(decoder):
+    """Malformed-but-even-length hex should hit pycrate's error 96/97/111 path,
+    and we should attach a plain-English explanation, not just the bare code."""
+    result = decoder.decode_universal("FFFF", layer="NAS", direction="DL")
+    nas_msg = result["NAS_Message"]
+    assert "error" in nas_msg
+    assert "error_meaning" in nas_msg
+    assert isinstance(nas_msg["error_meaning"], str)
+    assert len(nas_msg["error_meaning"]) > 0
+
+
+def test_rrc_decode_diagnostics_flag_partial_consumption(decoder):
+    """This hex decodes 'successfully' by pycrate's rules but only consumes a
+    small fraction of the buffer -- the diagnostic should flag that."""
+    result = decoder.decode_universal("5631F2857DE6", layer="RRC", channel="DCCH", direction="DL")
+    assert "_decode_diagnostics" in result
+    diag = result["_decode_diagnostics"]
+    assert diag["input_bytes"] == 6
+    assert diag["bytes_consumed_on_reencode"] < diag["input_bytes"]
+    assert "warning" in diag
+
+
+def test_rrc_decode_diagnostics_no_warning_on_full_consumption(decoder):
+    """A genuinely correct decode (RRC Connection Request) should fully
+    consume its buffer and NOT trigger the partial-consumption warning."""
+    result = decoder.decode_universal("5DA6A5878E06", layer="RRC", channel="CCCH", direction="UL")
+    assert "_decode_diagnostics" in result
+    diag = result["_decode_diagnostics"]
+    assert diag["bytes_consumed_on_reencode"] == diag["input_bytes"]
+    assert "warning" not in diag
+
+
+def test_ue_capability_information_ul_dcch(decoder):
+    """UECapabilityInformation (UE->NW, uplink) via Layer=RRC/Channel=DCCH/
+    Direction=UL. Hex built with pycrate itself as ground truth: a minimal
+    valid ue-CapabilityRAT-ContainerList with one EUTRA entry."""
+    result = decoder.decode_universal("3801004000000000", layer="RRC", channel="DCCH", direction="UL")
+    assert "RRC_Message" in result
+    msg_type = result["RRC_Message"]["message"][1][0]
+    assert msg_type == "ueCapabilityInformation"
+
+    # Should fully consume the buffer -- no partial-decode warning
+    assert "_decode_diagnostics" in result
+    diag = result["_decode_diagnostics"]
+    assert diag["bytes_consumed_on_reencode"] == diag["input_bytes"]
+    assert "warning" not in diag
+
+
 def test_hex_normalization(decoder):
     """Spaces, 0x prefixes and newlines should be stripped before parsing."""
     messy = "07 49 01\n5A 4A 50 0B\r0x F6 13 00 83 00 01 02 00 00 00 01 54 06 40 13 00 83 00 02 57 02 00 00 13 13 00 83 00 01 23 05 F4 12 34 56 78 64 01 81"

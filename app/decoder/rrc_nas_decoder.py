@@ -16,6 +16,25 @@ from pycrate_mobile import NAS
 
 class RRCNASDecoder:
 
+    # pycrate's NAS parsers (parse_NAS_MO/MT, parse_NASLTE_MO/MT, parse_NAS5G)
+    # only ever return one of these three integer codes on failure -- verified
+    # against pycrate 0.8.1 source. These happen to reuse the same numbering
+    # space as 3GPP TS 24.301 Annex A cause values, but pycrate assigns them
+    # itself for its own three failure modes; it is not returning a cause
+    # value parsed out of the message.
+    NAS_ERROR_CODES = {
+        96: "Invalid mandatory information -- the buffer doesn't match this "
+            "message type's expected structure. Usually means the wrong "
+            "layer/channel/direction was selected, or the hex isn't a plain "
+            "unencrypted NAS message (e.g. it's ciphered, or it's actually an "
+            "RRC-wrapped payload).",
+        97: "Message type non-existent or not implemented -- the protocol "
+            "discriminator/message-type byte doesn't match any known NAS "
+            "message pycrate can decode.",
+        111: "Unspecified protocol error -- the buffer was too short to even "
+            "read a protocol discriminator and message type.",
+    }
+
     def __init__(self):
         # Load RRC definitions once
         self.rrc_defs = RRCLTE.EUTRA_RRC_Definitions
@@ -71,6 +90,34 @@ class RRCNASDecoder:
 
                 result = {"RRC_Message": rrc_val}
 
+                # Diagnostic: pycrate's from_uper() does NOT validate that the
+                # whole input buffer was actually consumed -- it happily
+                # "succeeds" after decoding just the first few bytes if the
+                # rest of the buffer doesn't fit the grammar it expects next.
+                # Re-encoding the decoded value and comparing lengths catches
+                # this: a large gap almost always means the wrong
+                # layer/channel/direction was selected for this hex, or the
+                # buffer contains more than one message concatenated together.
+                # Small gaps (a byte or so) can be normal UPER padding/
+                # extension-encoding variance and aren't necessarily wrong.
+                try:
+                    reencoded_len = len(pdu.to_uper())
+                    consumed_ratio = reencoded_len / len(data) if data else 1.0
+                    result["_decode_diagnostics"] = {
+                        "input_bytes": len(data),
+                        "bytes_consumed_on_reencode": reencoded_len,
+                    }
+                    if consumed_ratio < 0.9:
+                        result["_decode_diagnostics"]["warning"] = (
+                            f"Only ~{consumed_ratio:.0%} of the input buffer was "
+                            f"consumed ({reencoded_len} of {len(data)} bytes) -- this "
+                            "decode likely used the wrong layer/channel/direction for "
+                            "this hex, or the buffer contains more than one message."
+                        )
+                except Exception:
+                    # Diagnostic itself failing shouldn't block returning the decode
+                    pass
+
                 # Scan for UE Capability Containers
                 decoded_containers = {}
                 self.scan_and_decode_capabilities(rrc_val, decoded_containers)
@@ -115,7 +162,10 @@ class RRCNASDecoder:
                 msg, err = NAS.parse_NAS_MT(data)
 
             if err:
-                return {"error": f"NAS Parsing Error: {err}"}
+                return {
+                    "error": f"NAS Parsing Error: {err}",
+                    "error_meaning": self.NAS_ERROR_CODES.get(err, "Unrecognized error code."),
+                }
 
             # Preferred: structured JSON with real field names
             try:
