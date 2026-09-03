@@ -11,6 +11,7 @@ Docs:
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from app import analytics
 from app.decoder.rrc_nas_decoder import RRCNASDecoder
 from app.schemas import DecodeRequest, DecodeResponse, HealthResponse
 
@@ -61,6 +62,8 @@ def decode(req: DecodeRequest) -> DecodeResponse:
     safe_result = _make_json_safe(raw_result)
     has_error = isinstance(safe_result, dict) and "error" in safe_result
 
+    analytics.record_event("api_decode", layer=req.layer.value, success=not has_error)
+
     return DecodeResponse(
         ok=not has_error,
         layer=req.layer,
@@ -69,3 +72,9 @@ def decode(req: DecodeRequest) -> DecodeResponse:
         result=safe_result,
         error=safe_result.get("error") if has_error else None,
     )
+
+
+@app.get("/stats", tags=["meta"])
+def stats() -> dict:
+    """Aggregated usage counters (decode volume, success rate, GUI vs API split)."""
+    return analytics.get_stats()

@@ -47,3 +47,18 @@ def test_decode_rrc_ok_or_clean_error():
     assert body["ok"] in (True, False)
     if not body["ok"]:
         assert isinstance(body["error"], str)
+
+
+def test_stats_endpoint_reflects_decode_activity():
+    before = client.get("/stats").json()["total_decodes"]
+
+    payload = {
+        "hex_str": "0749015A4A500BF6130083000102000000015406401300830002570200001313008300012305F412345678640181",
+        "layer": "NAS",
+        "channel": "DCCH",
+        "direction": "DL",
+    }
+    client.post("/decode", json=payload)
+
+    after = client.get("/stats").json()["total_decodes"]
+    assert after == before + 1

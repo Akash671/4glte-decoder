@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import requests
 import streamlit as st
 
+from app import analytics
 from app.decoder.rrc_nas_decoder import RRCNASDecoder
 
 st.set_page_config(page_title="4G LTE RRC/NAS Decoder", page_icon="📡", layout="wide")
@@ -89,6 +90,13 @@ def _json_safe(value):
 st.title("📡 4G LTE RRC/NAS Decoder")
 st.caption("Decode raw LTE RRC and NAS hex captures into structured, readable JSON — powered by pycrate.")
 
+# Count each browser session as one page view, exactly once -- st.session_state
+# persists across reruns within a session (every widget interaction reruns
+# the whole script), but resets on a fresh tab/reload, which is what we want.
+if "view_recorded" not in st.session_state:
+    analytics.record_event("page_view")
+    st.session_state["view_recorded"] = True
+
 with st.sidebar:
     st.header("Settings")
     st.write(f"Decode mode: **{DECODER_MODE}**")
@@ -97,6 +105,23 @@ with st.sidebar:
     st.divider()
     st.subheader("Load an example")
     choice = st.selectbox("Example messages", ["— none —"] + list(EXAMPLES.keys()))
+
+    st.divider()
+    st.subheader("📊 Usage stats")
+    try:
+        s = analytics.get_stats()
+        c1, c2 = st.columns(2)
+        c1.metric("Page views", s["total_views"])
+        c2.metric("Decodes", s["total_decodes"])
+        if s["success_rate"] is not None:
+            st.caption(f"Success rate: {s['success_rate'] * 100:.0f}%  "
+                       f"({s['success_count']} ok / {s['error_count']} error)")
+        if s["decodes_by_layer"]:
+            st.caption("By layer: " + ", ".join(f"{k}={v}" for k, v in s["decodes_by_layer"].items()))
+        if st.button("Refresh stats", use_container_width=True):
+            st.rerun()
+    except Exception as exc:
+        st.caption(f"Stats unavailable: {exc}")
 
 default_hex, default_layer, default_channel, default_direction = "", "NAS", "DCCH", "DL"
 if choice != "— none —":
@@ -138,7 +163,10 @@ if decode_clicked:
 
         if output is not None:
             result_payload = output.get("result", output)
-            if isinstance(result_payload, dict) and "error" in result_payload and len(result_payload) == 1:
+            has_error = isinstance(result_payload, dict) and "error" in result_payload and len(result_payload) == 1
+            analytics.record_event("gui_decode", layer=layer, success=not has_error)
+
+            if has_error:
                 st.error(result_payload["error"])
             else:
                 st.success("Decoded successfully.")

@@ -6,7 +6,6 @@ colorTo: indigo
 sdk: docker
 app_port: 7860
 pinned: false
-live: https://4glte-decoder-j4hyp8afsswp72ejxhrqyz.streamlit.app/
 ---
 
 # 4G LTE RRC/NAS Decoder
@@ -106,6 +105,27 @@ Response:
 Supported `layer` / `channel` / `direction` combinations mirror the mapping in
 `RRCNASDecoder.decode_universal` — see `app/schemas.py` for the exact enums,
 and `GET /docs` for interactive Swagger docs once the API is running.
+
+## Usage analytics
+
+Both the API and GUI record lightweight usage events (page views, decode
+attempts by layer/success) to a shared SQLite database via `app/analytics.py`.
+
+- **API**: `GET /stats` returns aggregated counters as JSON.
+- **GUI**: a "📊 Usage stats" panel in the sidebar shows the same counters live.
+
+**Persistence caveat:** SQLite lives on the container's filesystem. On
+Streamlit Community Cloud (and most free container hosts), that filesystem
+is ephemeral -- counts survive page reloads within a session but reset on
+every app restart/redeploy. For Docker/self-hosted deployments this is
+solved with a named volume (already wired up in `docker-compose.yml`), so
+counts survive `docker compose down`/restarts.
+
+If you need counts that survive redeploys on a platform with no persistent
+volume (e.g. plain Streamlit Cloud), swap `app/analytics.py`'s storage for a
+hosted DB (Supabase's free Postgres tier is a good fit) behind the same
+`record_event()` / `get_stats()` functions -- nothing else in the app needs
+to change.
 
 ## Testing & CI
 

@@ -5,6 +5,10 @@ services:
       dockerfile: Dockerfile.api
     ports:
       - "8000:8000"
+    environment:
+      - ANALYTICS_DB_PATH=/code/data/analytics.db
+    volumes:
+      - analytics-data:/code/data
 
   gui:
     build:
@@ -16,5 +20,16 @@ services:
       - PORT=7860
       - DECODER_MODE=api
       - API_URL=http://api:8000
+      - ANALYTICS_DB_PATH=/code/data/analytics.db
+    volumes:
+      - analytics-data:/code/data
     depends_on:
       - api
+
+volumes:
+  # Named volume so the SQLite analytics DB survives `docker compose down`
+  # and container restarts. Shared between api/gui so both processes'
+  # events land in one file. Without this, analytics resets every time the
+  # containers are recreated -- same ephemeral-storage caveat as Streamlit
+  # Community Cloud, just self-inflicted instead of platform-imposed.
+  analytics-data:
